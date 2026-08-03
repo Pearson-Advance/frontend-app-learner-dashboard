@@ -1,3 +1,4 @@
+import { getConfig } from '@edx/frontend-platform';
 import track from 'tracking';
 import { reduxHooks } from 'hooks';
 import { useState } from 'react';
@@ -41,7 +42,10 @@ export const useOptionVisibility = (cardId) => {
   const { twitter, facebook } = reduxHooks.useCardSocialSettingsData(cardId);
   const { isEarned } = reduxHooks.useCardCertificateData(cardId);
 
-  const shouldShowUnenrollItem = isEnrolled && !isEarned;
+  const { ENABLE_LEARNER_UNENROLLMENT } = getConfig();
+  const isUnenrollmentEnabled = ENABLE_LEARNER_UNENROLLMENT === true;
+
+  const shouldShowUnenrollItem = isUnenrollmentEnabled && isEnrolled && !isEarned;
   const shouldShowDropdown = (
     shouldShowUnenrollItem
     || isEmailEnabled

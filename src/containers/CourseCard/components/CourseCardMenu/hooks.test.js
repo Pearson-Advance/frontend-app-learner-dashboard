@@ -1,8 +1,13 @@
+import { getConfig } from '@edx/frontend-platform';
 import { reduxHooks } from 'hooks';
 import track from 'tracking';
 import { MockUseState } from 'testUtils';
 
 import * as hooks from './hooks';
+
+jest.mock('@edx/frontend-platform', () => ({
+  getConfig: jest.fn(() => ({ ENABLE_LEARNER_UNENROLLMENT: false })),
+}));
 
 jest.mock('hooks', () => ({
   reduxHooks: {
@@ -101,16 +106,31 @@ describe('CourseCardMenu hooks', () => {
         isEarned: !!returnVals.isEarned,
       });
     };
+    beforeEach(() => {
+      getConfig.mockReturnValue({ ENABLE_LEARNER_UNENROLLMENT: false });
+    });
     describe('shouldShowUnenrollItem', () => {
-      it('returns true if enrolled and not earned', () => {
+      it('returns false by default even if enrolled and not earned', () => {
+        mockReduxHooks({ isEnrolled: true });
+        expect(hooks.useOptionVisibility(cardId).shouldShowUnenrollItem).toEqual(false);
+      });
+      it('returns true if unenrollment is enabled via config and enrolled and not earned', () => {
+        getConfig.mockReturnValue({ ENABLE_LEARNER_UNENROLLMENT: true });
         mockReduxHooks({ isEnrolled: true });
         expect(hooks.useOptionVisibility(cardId).shouldShowUnenrollItem).toEqual(true);
       });
-      it('returns false if not enrolled', () => {
+      it('returns false when the config value is the string "true" (only boolean true enables it)', () => {
+        getConfig.mockReturnValue({ ENABLE_LEARNER_UNENROLLMENT: 'true' });
+        mockReduxHooks({ isEnrolled: true });
+        expect(hooks.useOptionVisibility(cardId).shouldShowUnenrollItem).toEqual(false);
+      });
+      it('returns false if enabled but not enrolled', () => {
+        getConfig.mockReturnValue({ ENABLE_LEARNER_UNENROLLMENT: true });
         mockReduxHooks();
         expect(hooks.useOptionVisibility(cardId).shouldShowUnenrollItem).toEqual(false);
       });
-      it('returns false if enrolled but also earned', () => {
+      it('returns false if enabled and enrolled but also earned', () => {
+        getConfig.mockReturnValue({ ENABLE_LEARNER_UNENROLLMENT: true });
         mockReduxHooks({ isEarned: true });
         expect(hooks.useOptionVisibility(cardId).shouldShowUnenrollItem).toEqual(false);
       });
@@ -135,9 +155,14 @@ describe('CourseCardMenu hooks', () => {
         mockReduxHooks({ isEmailEnabled: true });
         expect(hooks.useOptionVisibility(cardId).shouldShowDropdown).toEqual(true);
       });
-      it('returns true if enrolled and not earned', () => {
+      it('returns true if unenrollment is enabled and enrolled and not earned', () => {
+        getConfig.mockReturnValue({ ENABLE_LEARNER_UNENROLLMENT: true });
         mockReduxHooks({ isEnrolled: true });
         expect(hooks.useOptionVisibility(cardId).shouldShowDropdown).toEqual(true);
+      });
+      it('returns false by default if enrolled and email/socials are disabled', () => {
+        mockReduxHooks({ isEnrolled: true });
+        expect(hooks.useOptionVisibility(cardId).shouldShowDropdown).toEqual(false);
       });
     });
   });
